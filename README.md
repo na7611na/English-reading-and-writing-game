@@ -7,13 +7,6 @@
 파일에서 추출한 핵심 표현 20개(`What do you do in your free time?` 패턴 등)입니다.
 다른 단원으로 바로 교체해서 쓸 수 있습니다.
 
-## 학생 태블릿 접속 (QR 코드)
-
-홈 화면 제목 옆에 현재 페이지 주소로 만들어진 **QR 코드**가 표시됩니다. 교사 기기(또는 교실 화면)에서
-앱을 열어두면 학생들이 각자 태블릿 카메라로 QR을 스캔해 바로 같은 주소로 접속할 수 있습니다.
-(`🔗 링크 복사` 버튼으로 주소를 복사해 메신저 등으로 공유할 수도 있어요.)
-`index.html` 파일을 직접 더블클릭해서 열었을 때는 다른 기기에서 접속할 수 있는 주소가 없어 QR이 비활성화됩니다 — 아래 "GitHub Pages로 배포"를 이용해주세요.
-
 ## 게임 구성 (5종)
 
 **📖 읽기(Reading)**
@@ -68,6 +61,5 @@ js/speech.js         영어 발음 듣기 (Web Speech API)
 js/utils.js          공용 유틸 함수
 js/handwriting.js    터치펜 손글씨 캔버스 (Pointer Events)
 js/games.js          5가지 미니게임 로직
-js/app.js            화면 전환, QR 코드, 교사용 편집기, 결과/기록/점수 화면
-js/vendor/qrcode.js  QR 코드 생성 라이브러리 (kazuhikoarase/qrcode-generator, MIT License, 오프라인 동작)
+js/app.js            화면 전환, 교사용 편집기, 결과/기록/점수 화면
 ```

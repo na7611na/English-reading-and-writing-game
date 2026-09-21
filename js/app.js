@@ -95,54 +95,6 @@ function updateHomeInfo() {
   document.getElementById('active-set-count').textContent = `${getActiveExpressions(appData).length}개 표현`;
 }
 
-// ---------- QR 코드 / 링크 공유 ----------
-function renderHeroQr() {
-  const qrBox = document.getElementById('qr-code');
-  const label = document.getElementById('qr-label');
-  const copyBtn = document.getElementById('copy-link-btn');
-
-  if (location.protocol === 'file:') {
-    qrBox.textContent = '📵';
-    qrBox.style.fontSize = '32px';
-    label.textContent = '파일로 직접 열면 QR 공유가 안 돼요. GitHub Pages 등 웹 주소로 배포해주세요.';
-    copyBtn.classList.add('hidden');
-    return;
-  }
-
-  const url = location.href;
-  try {
-    const qr = qrcode(0, 'M');
-    qr.addData(url);
-    qr.make();
-    qrBox.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-  } catch (e) {
-    qrBox.textContent = 'QR 생성 실패';
-  }
-
-  copyBtn.addEventListener('click', () => {
-    const done = () => {
-      copyBtn.textContent = '✅ 복사됨!';
-      setTimeout(() => { copyBtn.textContent = '🔗 링크 복사'; }, 1500);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(done).catch(() => fallbackCopy(url, done));
-    } else {
-      fallbackCopy(url, done);
-    }
-  });
-}
-
-function fallbackCopy(text, done) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select();
-  try { document.execCommand('copy'); done(); } catch (e) { /* ignore */ }
-  document.body.removeChild(ta);
-}
-
 studentNameInput.addEventListener('input', () => setStudentName(studentNameInput.value.trim()));
 
 document.getElementById('go-modeselect-btn').addEventListener('click', () => {
@@ -443,5 +395,4 @@ function renderStats() {
 
 // ---------- 초기화 ----------
 updateHomeInfo();
-renderHeroQr();
 showScreen('screen-home');
