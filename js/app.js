@@ -93,9 +93,24 @@ function updateHomeInfo() {
   }
   document.getElementById('active-set-name').textContent = appData.activeSet;
   document.getElementById('active-set-count').textContent = `${getActiveExpressions(appData).length}개 표현`;
+  updateFloatingScore();
 }
 
-studentNameInput.addEventListener('input', () => setStudentName(studentNameInput.value.trim()));
+// 화면 어디서나 오른쪽에 계속 떠 있는 누적 총점 배지
+function updateFloatingScore() {
+  const badge = document.getElementById('floating-total-score');
+  const name = getStudentName();
+  if (!name) { badge.classList.add('hidden'); return; }
+  const stats = loadStats(name);
+  if (!stats.history.length) { badge.classList.add('hidden'); return; }
+  badge.textContent = `🏆 총점 ${stats.xp}점`;
+  badge.classList.remove('hidden');
+}
+
+studentNameInput.addEventListener('input', () => {
+  setStudentName(studentNameInput.value.trim());
+  updateFloatingScore();
+});
 
 document.getElementById('go-modeselect-btn').addEventListener('click', () => {
   if (!getStudentName()) { alert('이름을 먼저 입력해주세요!'); studentNameInput.focus(); return; }
@@ -304,6 +319,7 @@ function handleGameFinish(gameId, result) {
     stats.history = stats.history.slice(0, 30);
     saveStats(name, stats);
   }
+  updateFloatingScore();
   showScreen('screen-result');
   renderResult(gameId, result, xp, stats);
 }
