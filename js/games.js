@@ -2,6 +2,10 @@
 // 각 게임 함수는 (container, expressions, onFinish) 형태이며,
 // onFinish({score, total, accuracy, missed}) 를 호출하며 종료된다.
 
+// 난이도 순 배점: 4지선다 퀴즈 < 카드 매칭 < 문장 조립 < 스펠링 < 받아쓰기
+// 어려운 게임일수록 정답 1개당 더 많은 점수를 줘서 도전을 유도한다.
+const GAME_POINTS = { quiz: 10, match: 15, builder: 20, spelling: 25, dictation: 30 };
+
 function buildDistractors(all, correct, count) {
   const pool = all.filter(x => x.id !== correct.id && x.en !== correct.en);
   return pickN(pool, count).map(x => x.en);
@@ -35,7 +39,7 @@ function runQuizGame(container, allExprs, onFinish, distractorPool) {
         answered = true;
         const correct = optText === q.en;
         if (correct) {
-          score += 10;
+          score += GAME_POINTS.quiz;
           btn.classList.add('correct');
         } else {
           btn.classList.add('wrong');
@@ -117,10 +121,10 @@ function runMatchGame(container, allExprs, onFinish) {
           b.classList.add('matched');
           matchedCount++;
           flipped = [];
-          window.setHud({ score: matchedCount * 10, progress: `짝 ${matchedCount} / ${pairCount}` });
+          window.setHud({ score: matchedCount * GAME_POINTS.match, progress: `짝 ${matchedCount} / ${pairCount}` });
           if (matchedCount === pairCount) {
             const accuracy = Math.round((pairCount / attempts) * 100);
-            setTimeout(() => onFinish({ score: matchedCount * 10, total: pairCount, accuracy: Math.min(accuracy, 100), missed: [] }), 500);
+            setTimeout(() => onFinish({ score: matchedCount * GAME_POINTS.match, total: pairCount, accuracy: Math.min(accuracy, 100), missed: [] }), 500);
           }
         } else {
           lock = true;
@@ -177,7 +181,7 @@ function runSpellingGame(container, allExprs, onFinish) {
       feedback.className = 'feedback hint';
       clearBtn.disabled = true;
       revealBtn.disabled = true;
-      wrap.appendChild(buildSelfCheckBar(q, s => {
+      wrap.appendChild(buildSelfCheckBar(q, GAME_POINTS.spelling, s => {
         score += s;
         window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
         if (s === 0) missed.push(q);
@@ -237,7 +241,7 @@ function renderAnswerInput(wrap, mode) {
 }
 
 // 손글씨 자기 채점용 버튼 바 ("정확히 썼어요" / "다시 연습할게요") + 다음 이동
-function buildSelfCheckBar(q, onScore, onNext) {
+function buildSelfCheckBar(q, points, onScore, onNext) {
   const wrap = el('div', 'self-check-bar');
   const row = el('div', 'btn-row');
   const goodBtn = el('button', 'btn-primary', '✅ 정확히 썼어요');
@@ -248,7 +252,7 @@ function buildSelfCheckBar(q, onScore, onNext) {
     onScore(score);
     wrap.appendChild(buildNextBar(q.en, onNext));
   }
-  goodBtn.addEventListener('click', () => choose(15));
+  goodBtn.addEventListener('click', () => choose(points));
   badBtn.addEventListener('click', () => choose(0));
   row.appendChild(badBtn);
   row.appendChild(goodBtn);
@@ -332,7 +336,7 @@ function runBuilderGame(container, allExprs, onFinish) {
       checkBtn.disabled = true;
       resetBtn.disabled = true;
       if (correct) {
-        score += 15;
+        score += GAME_POINTS.builder;
         feedback.textContent = '✅ 정답이에요!';
         feedback.className = 'feedback correct';
       } else {
@@ -401,7 +405,7 @@ function runDictationGame(container, allExprs, onFinish) {
       feedback.className = 'feedback hint';
       clearBtn.disabled = true;
       revealBtn.disabled = true;
-      wrap.appendChild(buildSelfCheckBar(q, s => {
+      wrap.appendChild(buildSelfCheckBar(q, GAME_POINTS.dictation, s => {
         score += s;
         window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
         if (s === 0) missed.push(q);
