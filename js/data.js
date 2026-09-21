@@ -71,9 +71,13 @@ function statsKey(name) {
 function loadStats(name) {
   try {
     const raw = localStorage.getItem(statsKey(name));
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      parsed.gameScores = parsed.gameScores || {};
+      return parsed;
+    }
   } catch (e) { /* ignore */ }
-  return { xp: 0, history: [] };
+  return { xp: 0, history: [], gameScores: {} };
 }
 
 function saveStats(name, stats) {

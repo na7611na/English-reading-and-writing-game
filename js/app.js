@@ -3,10 +3,20 @@
 const GAME_TITLES = {
   quiz: '4지선다 스피드 퀴즈',
   match: '카드 매칭 게임',
-  spelling: '스펠링 챌린지',
   builder: '문장 조립 게임',
+  spelling: '스펠링 챌린지',
   dictation: '받아쓰기 챌린지',
 };
+
+const GAME_ICONS = {
+  quiz: '🎯',
+  match: '🃏',
+  builder: '🧩',
+  spelling: '✍️',
+  dictation: '🎧',
+};
+
+const GAME_ORDER = ['quiz', 'match', 'builder', 'spelling', 'dictation'];
 
 const BACK_MAP = {
   'screen-setup': 'screen-home',
@@ -61,14 +71,76 @@ const studentLevelDiv = document.getElementById('student-level');
 function updateHomeInfo() {
   const name = getStudentName();
   studentNameInput.value = name;
+  const scoreCard = document.getElementById('home-score-card');
   if (name) {
     const stats = loadStats(name);
     studentLevelDiv.textContent = `Lv.${levelForXp(stats.xp)} · 누적 XP ${stats.xp}`;
+    if (stats.history.length) {
+      scoreCard.classList.remove('hidden');
+      document.getElementById('home-total-score').textContent = `총점 ${stats.xp}점`;
+      const gsWrap = document.getElementById('home-game-scores');
+      clear(gsWrap);
+      GAME_ORDER.forEach(gid => {
+        const s = stats.gameScores[gid] || 0;
+        gsWrap.appendChild(el('div', 'score-chip', `${GAME_ICONS[gid]} ${s}점`));
+      });
+    } else {
+      scoreCard.classList.add('hidden');
+    }
   } else {
     studentLevelDiv.textContent = '';
+    scoreCard.classList.add('hidden');
   }
   document.getElementById('active-set-name').textContent = appData.activeSet;
   document.getElementById('active-set-count').textContent = `${getActiveExpressions(appData).length}개 표현`;
+}
+
+// ---------- QR 코드 / 링크 공유 ----------
+function renderHeroQr() {
+  const qrBox = document.getElementById('qr-code');
+  const label = document.getElementById('qr-label');
+  const copyBtn = document.getElementById('copy-link-btn');
+
+  if (location.protocol === 'file:') {
+    qrBox.textContent = '📵';
+    qrBox.style.fontSize = '32px';
+    label.textContent = '파일로 직접 열면 QR 공유가 안 돼요. GitHub Pages 등 웹 주소로 배포해주세요.';
+    copyBtn.classList.add('hidden');
+    return;
+  }
+
+  const url = location.href;
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    qrBox.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+  } catch (e) {
+    qrBox.textContent = 'QR 생성 실패';
+  }
+
+  copyBtn.addEventListener('click', () => {
+    const done = () => {
+      copyBtn.textContent = '✅ 복사됨!';
+      setTimeout(() => { copyBtn.textContent = '🔗 링크 복사'; }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done).catch(() => fallbackCopy(url, done));
+    } else {
+      fallbackCopy(url, done);
+    }
+  });
+}
+
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); done(); } catch (e) { /* ignore */ }
+  document.body.removeChild(ta);
 }
 
 studentNameInput.addEventListener('input', () => setStudentName(studentNameInput.value.trim()));
@@ -264,9 +336,11 @@ function handleGameFinish(gameId, result) {
   lastMissed = result.missed || [];
   const name = getStudentName();
   const xp = result.score;
+  let stats = null;
   if (name) {
-    const stats = loadStats(name);
+    stats = loadStats(name);
     stats.xp += xp;
+    stats.gameScores[gameId] = (stats.gameScores[gameId] || 0) + result.score;
     stats.history.unshift({
       date: new Date().toISOString(),
       game: gameId,
@@ -278,16 +352,23 @@ function handleGameFinish(gameId, result) {
     saveStats(name, stats);
   }
   showScreen('screen-result');
-  renderResult(gameId, result, xp);
+  renderResult(gameId, result, xp, stats);
 }
 
-function renderResult(gameId, result, xp) {
+function renderResult(gameId, result, xp, stats) {
   document.getElementById('result-title').textContent = GAME_TITLES[gameId] + ' 결과';
   document.getElementById('result-emoji').textContent =
     result.accuracy >= 90 ? '🎉' : result.accuracy >= 70 ? '👍' : '💪';
   document.getElementById('result-score').textContent = result.score;
   document.getElementById('result-accuracy').textContent = result.accuracy + '%';
   document.getElementById('result-xp').textContent = '+' + xp;
+
+  const totalRow = document.getElementById('result-total-row');
+  clear(totalRow);
+  if (stats) {
+    totalRow.appendChild(document.createTextNode(`🏆 나의 총점: ${stats.xp}점`));
+    totalRow.appendChild(el('span', 'total-sub', `${GAME_TITLES[gameId]} 누적 ${stats.gameScores[gameId]}점 · 틀린 문제를 다시 풀면 점수가 더 올라가요!`));
+  }
 
   const missedWrap = document.getElementById('missed-wrap');
   const missedList = document.getElementById('missed-list');
@@ -331,6 +412,19 @@ function renderStats() {
   summary.appendChild(el('div', 'stats-level', `Lv.${level} · 누적 XP ${stats.xp}`));
   summary.appendChild(el('div', 'stats-count', `총 ${stats.history.length}회 플레이`));
 
+  const gsWrap = document.getElementById('stats-gamescores');
+  clear(gsWrap);
+  GAME_ORDER.forEach(gid => {
+    const row = el('div', 'gs-row');
+    row.appendChild(el('div', null, `${GAME_ICONS[gid]} ${GAME_TITLES[gid]}`));
+    row.appendChild(el('div', 'gs-score', `${stats.gameScores[gid] || 0}점`));
+    gsWrap.appendChild(row);
+  });
+  const totalGsRow = el('div', 'gs-row total');
+  totalGsRow.appendChild(el('div', null, '🏆 총점'));
+  totalGsRow.appendChild(el('div', 'gs-score', `${stats.xp}점`));
+  gsWrap.appendChild(totalGsRow);
+
   const history = document.getElementById('stats-history');
   clear(history);
   if (!stats.history.length) {
@@ -349,4 +443,5 @@ function renderStats() {
 
 // ---------- 초기화 ----------
 updateHomeInfo();
+renderHeroQr();
 showScreen('screen-home');
