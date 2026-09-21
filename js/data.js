@@ -2,7 +2,6 @@
 
 const STORAGE_KEY = 'rwq_data_v1';
 const STUDENT_KEY = 'rwq_student_v1';
-const INPUT_MODE_KEY = 'rwq_input_mode_v1';
 
 // Lesson 9. I Ride a Bike (여가 시간 표현) - 업로드된 교과서 파일에서 추출한 주요 표현
 const DEFAULT_SET_NAME = 'Lesson 9. I Ride a Bike (여가 시간 표현)';
@@ -87,14 +86,4 @@ function saveStats(name, stats) {
 
 function levelForXp(xp) {
   return Math.floor(xp / 100) + 1;
-}
-
-// 스펠링/받아쓰기 챌린지의 입력 방식: 'pen'(손글씨) 또는 'keyboard'(키보드 타이핑)
-function getInputMode() {
-  const v = localStorage.getItem(INPUT_MODE_KEY);
-  return v === 'keyboard' ? 'keyboard' : 'pen';
-}
-
-function setInputMode(mode) {
-  localStorage.setItem(INPUT_MODE_KEY, mode === 'keyboard' ? 'keyboard' : 'pen');
 }

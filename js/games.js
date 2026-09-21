@@ -143,7 +143,7 @@ function runMatchGame(container, allExprs, onFinish) {
   });
 }
 
-// ---------- 3. 쓰기: 스펠링 챌린지 (터치펜 손글씨) ----------
+// ---------- 3. 쓰기: 스펠링 챌린지 (키보드 입력, 자동 채점) ----------
 function runSpellingGame(container, allExprs, onFinish) {
   const items = pickN(allExprs, Math.min(8, allExprs.length));
   let idx = 0, score = 0;
@@ -154,38 +154,60 @@ function runSpellingGame(container, allExprs, onFinish) {
     window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
     const q = items[idx];
 
-    const mode = getInputMode();
     const wrap = el('div', 'game-card');
-    wrap.appendChild(buildInputModeToggle(() => renderQuestion()));
-    wrap.appendChild(el('div', 'game-instruction', mode === 'keyboard'
-      ? '⌨️ 우리말 뜻에 맞는 영어 표현을 키보드로 입력하세요'
-      : '✍️ 우리말 뜻에 맞는 영어 표현을 터치펜으로 써보세요'));
+    wrap.appendChild(el('div', 'game-instruction', '⌨️ 우리말 뜻에 맞는 영어 표현을 입력하세요'));
     wrap.appendChild(el('div', 'prompt-ko', q.ko));
 
-    const pad = renderAnswerInput(wrap, mode);
+    const input = el('input', 'text-input');
+    input.type = 'text';
+    input.autocomplete = 'off';
+    input.autocapitalize = 'off';
+    input.spellcheck = false;
+    input.placeholder = '여기에 영어로 입력하세요';
+    wrap.appendChild(input);
 
     const feedback = el('div', 'feedback');
     wrap.appendChild(feedback);
 
     const btnRow = el('div', 'btn-row');
-    const clearBtn = el('button', 'btn-secondary', '🧹 지우기');
-    clearBtn.addEventListener('click', () => pad.clear());
-    const revealBtn = el('button', 'btn-primary', '✅ 정답 확인');
-    btnRow.appendChild(clearBtn);
-    btnRow.appendChild(revealBtn);
+    const giveUpBtn = el('button', 'btn-secondary', '🙋 모르겠어요');
+    const checkBtn = el('button', 'btn-primary', '✅ 채점하기');
+    btnRow.appendChild(giveUpBtn);
+    btnRow.appendChild(checkBtn);
     wrap.appendChild(btnRow);
     container.appendChild(wrap);
+    setTimeout(() => input.focus(), 50);
 
-    revealBtn.addEventListener('click', () => {
+    function finishQuestion() {
+      input.disabled = true;
+      checkBtn.disabled = true;
+      giveUpBtn.disabled = true;
+      wrap.appendChild(buildNextBar(q.en, goNext));
+    }
+
+    function check() {
+      const correct = normalize(input.value) === normalize(q.en);
+      if (correct) {
+        score += GAME_POINTS.spelling;
+        feedback.textContent = '✅ 정답이에요!';
+        feedback.className = 'feedback correct';
+        window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
+        finishQuestion();
+      } else {
+        feedback.textContent = '❌ 틀렸어요. 다시 고쳐 써보세요!';
+        feedback.className = 'feedback wrong';
+        input.focus();
+      }
+    }
+
+    checkBtn.addEventListener('click', check);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+
+    giveUpBtn.addEventListener('click', () => {
       feedback.textContent = `정답: ${q.en}`;
       feedback.className = 'feedback hint';
-      clearBtn.disabled = true;
-      revealBtn.disabled = true;
-      wrap.appendChild(buildSelfCheckBar(q, GAME_POINTS.spelling, s => {
-        score += s;
-        window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
-        if (s === 0) missed.push(q);
-      }, goNext));
+      missed.push(q);
+      finishQuestion();
     });
 
     function goNext() {
@@ -200,64 +222,6 @@ function runSpellingGame(container, allExprs, onFinish) {
   }
 
   renderQuestion();
-}
-
-// 손글씨 ↔ 키보드 입력 방식 전환 탭
-function buildInputModeToggle(onChange) {
-  const wrap = el('div', 'input-mode-toggle');
-  const modes = [
-    { id: 'pen', label: '✍️ 손글씨' },
-    { id: 'keyboard', label: '⌨️ 키보드' },
-  ];
-  const current = getInputMode();
-  modes.forEach(m => {
-    const btn = el('button', 'mode-toggle-btn' + (current === m.id ? ' active' : ''), m.label);
-    btn.addEventListener('click', () => {
-      if (getInputMode() === m.id) return;
-      setInputMode(m.id);
-      onChange(m.id);
-    });
-    wrap.appendChild(btn);
-  });
-  return wrap;
-}
-
-// 답 입력 위젯 생성: 손글씨 캔버스 또는 키보드 텍스트 입력 (둘 다 clear() 제공)
-function renderAnswerInput(wrap, mode) {
-  if (mode === 'keyboard') {
-    const inputWrap = el('div', 'keyboard-input-wrap');
-    const input = el('input', 'text-input');
-    input.type = 'text';
-    input.autocomplete = 'off';
-    input.autocapitalize = 'off';
-    input.spellcheck = false;
-    input.placeholder = '여기에 영어로 입력하세요';
-    inputWrap.appendChild(input);
-    wrap.appendChild(inputWrap);
-    setTimeout(() => input.focus(), 50);
-    return { clear: () => { input.value = ''; input.focus(); } };
-  }
-  return createHandwritingPad(wrap);
-}
-
-// 손글씨 자기 채점용 버튼 바 ("정확히 썼어요" / "다시 연습할게요") + 다음 이동
-function buildSelfCheckBar(q, points, onScore, onNext) {
-  const wrap = el('div', 'self-check-bar');
-  const row = el('div', 'btn-row');
-  const goodBtn = el('button', 'btn-primary', '✅ 정확히 썼어요');
-  const badBtn = el('button', 'btn-secondary', '❌ 다시 연습할게요');
-  function choose(score) {
-    goodBtn.disabled = true;
-    badBtn.disabled = true;
-    onScore(score);
-    wrap.appendChild(buildNextBar(q.en, onNext));
-  }
-  goodBtn.addEventListener('click', () => choose(points));
-  badBtn.addEventListener('click', () => choose(0));
-  row.appendChild(badBtn);
-  row.appendChild(goodBtn);
-  wrap.appendChild(row);
-  return wrap;
 }
 
 // ---------- 4. 쓰기: 문장 조립 게임 ----------
@@ -363,7 +327,7 @@ function runBuilderGame(container, allExprs, onFinish) {
   renderQuestion();
 }
 
-// ---------- 5. 쓰기: 받아쓰기 챌린지 (터치펜 손글씨) ----------
+// ---------- 5. 쓰기: 받아쓰기 챌린지 (키보드 입력, 자동 채점) ----------
 function runDictationGame(container, allExprs, onFinish) {
   const items = pickN(allExprs, Math.min(8, allExprs.length));
   let idx = 0, score = 0;
@@ -374,42 +338,64 @@ function runDictationGame(container, allExprs, onFinish) {
     window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
     const q = items[idx];
 
-    const mode = getInputMode();
     const wrap = el('div', 'game-card');
-    wrap.appendChild(buildInputModeToggle(() => renderQuestion()));
-    wrap.appendChild(el('div', 'game-instruction', mode === 'keyboard'
-      ? '⌨️ 소리를 듣고 키보드로 영어를 받아쓰세요'
-      : '🎧 소리를 듣고 터치펜으로 영어를 받아쓰세요'));
+    wrap.appendChild(el('div', 'game-instruction', '⌨️ 소리를 듣고 영어로 받아쓰세요'));
 
     const listenBtn = el('button', 'btn-listen', '🔊 다시 듣기');
     listenBtn.addEventListener('click', () => speakEnglish(q.en));
     wrap.appendChild(listenBtn);
     setTimeout(() => speakEnglish(q.en), 300);
 
-    const pad = renderAnswerInput(wrap, mode);
+    const input = el('input', 'text-input');
+    input.type = 'text';
+    input.autocomplete = 'off';
+    input.autocapitalize = 'off';
+    input.spellcheck = false;
+    input.placeholder = '들은 내용을 영어로 입력하세요';
+    wrap.appendChild(input);
 
     const feedback = el('div', 'feedback');
     wrap.appendChild(feedback);
 
     const btnRow = el('div', 'btn-row');
-    const clearBtn = el('button', 'btn-secondary', '🧹 지우기');
-    clearBtn.addEventListener('click', () => pad.clear());
-    const revealBtn = el('button', 'btn-primary', '✅ 정답 확인');
-    btnRow.appendChild(clearBtn);
-    btnRow.appendChild(revealBtn);
+    const giveUpBtn = el('button', 'btn-secondary', '🙋 모르겠어요');
+    const checkBtn = el('button', 'btn-primary', '✅ 채점하기');
+    btnRow.appendChild(giveUpBtn);
+    btnRow.appendChild(checkBtn);
     wrap.appendChild(btnRow);
     container.appendChild(wrap);
+    setTimeout(() => input.focus(), 50);
 
-    revealBtn.addEventListener('click', () => {
+    function finishQuestion() {
+      input.disabled = true;
+      checkBtn.disabled = true;
+      giveUpBtn.disabled = true;
+      wrap.appendChild(buildNextBar(q.en, goNext));
+    }
+
+    function check() {
+      const correct = normalize(input.value) === normalize(q.en);
+      if (correct) {
+        score += GAME_POINTS.dictation;
+        feedback.textContent = `✅ 정답이에요! (${q.ko})`;
+        feedback.className = 'feedback correct';
+        window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
+        finishQuestion();
+      } else {
+        feedback.textContent = '❌ 틀렸어요. 다시 들어보고 고쳐 써보세요!';
+        feedback.className = 'feedback wrong';
+        input.focus();
+      }
+    }
+
+    checkBtn.addEventListener('click', check);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+
+    giveUpBtn.addEventListener('click', () => {
       feedback.textContent = `정답: ${q.en} (${q.ko})`;
       feedback.className = 'feedback hint';
-      clearBtn.disabled = true;
-      revealBtn.disabled = true;
-      wrap.appendChild(buildSelfCheckBar(q, GAME_POINTS.dictation, s => {
-        score += s;
-        window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
-        if (s === 0) missed.push(q);
-      }, goNext));
+      missed.push(q);
+      finishQuestion();
     });
 
     function goNext() {
