@@ -241,6 +241,31 @@ button:disabled { opacity: 0.5; cursor: default; }
   box-shadow: 0 6px 14px rgba(255,201,60,0.4);
 }
 
+/* 손글씨 ↔ 키보드 입력 전환 탭 */
+.input-mode-toggle {
+  display: flex;
+  gap: 6px;
+  background: #F0F1FA;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+.mode-toggle-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 9px 8px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.mode-toggle-btn.active { background: #fff; color: var(--primary-dark); box-shadow: 0 2px 6px rgba(60,70,150,0.15); }
+
+.keyboard-input-wrap { margin-bottom: 14px; }
+.keyboard-input-wrap .text-input { margin-bottom: 0; }
+
 /* Handwriting pad */
 .handwriting-pad {
   position: relative;

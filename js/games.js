@@ -150,11 +150,15 @@ function runSpellingGame(container, allExprs, onFinish) {
     window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
     const q = items[idx];
 
+    const mode = getInputMode();
     const wrap = el('div', 'game-card');
-    wrap.appendChild(el('div', 'game-instruction', '✍️ 우리말 뜻에 맞는 영어 표현을 터치펜으로 써보세요'));
+    wrap.appendChild(buildInputModeToggle(() => renderQuestion()));
+    wrap.appendChild(el('div', 'game-instruction', mode === 'keyboard'
+      ? '⌨️ 우리말 뜻에 맞는 영어 표현을 키보드로 입력하세요'
+      : '✍️ 우리말 뜻에 맞는 영어 표현을 터치펜으로 써보세요'));
     wrap.appendChild(el('div', 'prompt-ko', q.ko));
 
-    const pad = createHandwritingPad(wrap);
+    const pad = renderAnswerInput(wrap, mode);
 
     const feedback = el('div', 'feedback');
     wrap.appendChild(feedback);
@@ -192,6 +196,44 @@ function runSpellingGame(container, allExprs, onFinish) {
   }
 
   renderQuestion();
+}
+
+// 손글씨 ↔ 키보드 입력 방식 전환 탭
+function buildInputModeToggle(onChange) {
+  const wrap = el('div', 'input-mode-toggle');
+  const modes = [
+    { id: 'pen', label: '✍️ 손글씨' },
+    { id: 'keyboard', label: '⌨️ 키보드' },
+  ];
+  const current = getInputMode();
+  modes.forEach(m => {
+    const btn = el('button', 'mode-toggle-btn' + (current === m.id ? ' active' : ''), m.label);
+    btn.addEventListener('click', () => {
+      if (getInputMode() === m.id) return;
+      setInputMode(m.id);
+      onChange(m.id);
+    });
+    wrap.appendChild(btn);
+  });
+  return wrap;
+}
+
+// 답 입력 위젯 생성: 손글씨 캔버스 또는 키보드 텍스트 입력 (둘 다 clear() 제공)
+function renderAnswerInput(wrap, mode) {
+  if (mode === 'keyboard') {
+    const inputWrap = el('div', 'keyboard-input-wrap');
+    const input = el('input', 'text-input');
+    input.type = 'text';
+    input.autocomplete = 'off';
+    input.autocapitalize = 'off';
+    input.spellcheck = false;
+    input.placeholder = '여기에 영어로 입력하세요';
+    inputWrap.appendChild(input);
+    wrap.appendChild(inputWrap);
+    setTimeout(() => input.focus(), 50);
+    return { clear: () => { input.value = ''; input.focus(); } };
+  }
+  return createHandwritingPad(wrap);
 }
 
 // 손글씨 자기 채점용 버튼 바 ("정확히 썼어요" / "다시 연습할게요") + 다음 이동
@@ -328,15 +370,19 @@ function runDictationGame(container, allExprs, onFinish) {
     window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
     const q = items[idx];
 
+    const mode = getInputMode();
     const wrap = el('div', 'game-card');
-    wrap.appendChild(el('div', 'game-instruction', '🎧 소리를 듣고 터치펜으로 영어를 받아쓰세요'));
+    wrap.appendChild(buildInputModeToggle(() => renderQuestion()));
+    wrap.appendChild(el('div', 'game-instruction', mode === 'keyboard'
+      ? '⌨️ 소리를 듣고 키보드로 영어를 받아쓰세요'
+      : '🎧 소리를 듣고 터치펜으로 영어를 받아쓰세요'));
 
     const listenBtn = el('button', 'btn-listen', '🔊 다시 듣기');
     listenBtn.addEventListener('click', () => speakEnglish(q.en));
     wrap.appendChild(listenBtn);
     setTimeout(() => speakEnglish(q.en), 300);
 
-    const pad = createHandwritingPad(wrap);
+    const pad = renderAnswerInput(wrap, mode);
 
     const feedback = el('div', 'feedback');
     wrap.appendChild(feedback);
