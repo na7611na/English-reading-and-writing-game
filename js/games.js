@@ -4,7 +4,7 @@
 
 // 난이도 순 배점: 4지선다 퀴즈 < 카드 매칭 < 문장 조립 < 스펠링 < 받아쓰기
 // 어려운 게임일수록 정답 1개당 더 많은 점수를 줘서 도전을 유도한다.
-const GAME_POINTS = { quiz: 10, match: 15, builder: 20, spelling: 25, dictation: 30 };
+const GAME_POINTS = { quiz: 10, match: 15, builder: 20, spelling: 100, dictation: 100 };
 
 function buildDistractors(all, correct, count) {
   const pool = all.filter(x => x.id !== correct.id && x.en !== correct.en);
