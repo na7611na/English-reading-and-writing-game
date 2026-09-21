@@ -8,7 +8,10 @@ function buildDistractors(all, correct, count) {
 }
 
 // ---------- 1. 읽기: 4지선다 스피드 퀴즈 ----------
-function runQuizGame(container, allExprs, onFinish) {
+// distractorPool: 오답 선택지를 뽑아올 전체 표현 목록 (틀린 문제만 다시 풀 때도 4지선다가 성립하도록,
+// 문제로 낼 items와 별도로 넘겨받는다. 생략 시 items 자체에서 뽑는다.)
+function runQuizGame(container, allExprs, onFinish, distractorPool) {
+  const pool = distractorPool && distractorPool.length ? distractorPool : allExprs;
   const items = pickN(allExprs, Math.min(10, allExprs.length));
   let idx = 0, score = 0;
   const missed = [];
@@ -17,7 +20,7 @@ function runQuizGame(container, allExprs, onFinish) {
     clear(container);
     window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
     const q = items[idx];
-    const options = shuffle([q.en, ...buildDistractors(allExprs, q, 3)]);
+    const options = shuffle([q.en, ...buildDistractors(pool, q, 3)]);
 
     const wrap = el('div', 'game-card');
     wrap.appendChild(el('div', 'game-instruction', '📖 이 뜻에 맞는 영어 표현을 고르세요'));

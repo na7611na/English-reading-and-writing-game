@@ -269,8 +269,9 @@ const RUNNERS = {
 };
 
 function startGame(gameId, customExprs) {
-  const exprs = customExprs && customExprs.length ? customExprs : getActiveExpressions(appData);
-  if (exprs.length < 4) {
+  const isRetry = !!(customExprs && customExprs.length);
+  const exprs = isRetry ? customExprs : getActiveExpressions(appData);
+  if (!isRetry && exprs.length < 4) {
     alert('표현이 너무 적어요! 표현 목록 관리에서 4개 이상 추가해주세요.');
     showScreen('screen-setup');
     refreshSetSelect();
@@ -281,7 +282,7 @@ function startGame(gameId, customExprs) {
   showScreen('screen-play');
   const container = document.getElementById('play-container');
   clear(container);
-  RUNNERS[gameId](container, exprs, result => handleGameFinish(gameId, result));
+  RUNNERS[gameId](container, exprs, result => handleGameFinish(gameId, result), getActiveExpressions(appData));
 }
 
 function handleGameFinish(gameId, result) {
