@@ -241,18 +241,43 @@ button:disabled { opacity: 0.5; cursor: default; }
 .next-bar { display: flex; gap: 10px; margin-top: 18px; }
 .next-bar button { flex: 1; margin-bottom: 0; }
 
+/* 철자 빈칸 넣기 게임 */
+.blank-sentence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 22px;
+  font-weight: 700;
+  padding: 20px 10px;
+  margin-bottom: 14px;
+  background: #F5F7FF;
+  border-radius: 14px;
+  line-height: 1.6;
+}
+.blank-char { white-space: pre; }
+.blank-input {
+  width: 30px;
+  height: 38px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 800;
+  border: none;
+  border-bottom: 3px solid var(--primary);
+  background: #fff;
+  border-radius: 6px 6px 0 0;
+  color: var(--primary-dark);
+  padding: 0;
+}
+.blank-input:focus { outline: none; background: #EFF1FE; }
+
 .text-input#play-input, .game-card .text-input { font-size: 20px; text-align: center; margin-bottom: 14px; }
 
 .feedback { min-height: 24px; font-weight: 700; margin: 10px 0; text-align: center; }
 .feedback.correct { color: #1B7A43; }
 .feedback.wrong { color: #C0392B; }
 .feedback.hint { color: var(--primary-dark); }
-
-.btn-listen {
-  display: block; margin: 0 auto 16px; background: var(--accent); border: none;
-  border-radius: 30px; padding: 16px 28px; font-size: 18px; font-weight: 800; cursor: pointer;
-  box-shadow: 0 6px 14px rgba(255,201,60,0.4);
-}
 
 /* Match game */
 .match-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }

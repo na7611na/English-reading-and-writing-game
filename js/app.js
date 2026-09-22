@@ -4,19 +4,19 @@ const GAME_TITLES = {
   quiz: '4지선다 스피드 퀴즈',
   match: '카드 매칭 게임',
   builder: '문장 조립 게임',
+  blank: '철자 빈칸 넣기 게임',
   spelling: '스펠링 챌린지',
-  dictation: '받아쓰기 챌린지',
 };
 
 const GAME_ICONS = {
   quiz: '🎯',
   match: '🃏',
   builder: '🧩',
+  blank: '🔤',
   spelling: '✍️',
-  dictation: '🎧',
 };
 
-const GAME_ORDER = ['quiz', 'match', 'builder', 'spelling', 'dictation'];
+const GAME_ORDER = ['quiz', 'match', 'builder', 'blank', 'spelling'];
 
 const BACK_MAP = {
   'screen-setup': 'screen-home',
@@ -278,9 +278,9 @@ document.querySelectorAll('.mode-tile').forEach(tile => {
 const RUNNERS = {
   quiz: runQuizGame,
   match: runMatchGame,
-  spelling: runSpellingGame,
   builder: runBuilderGame,
-  dictation: runDictationGame,
+  blank: runBlankFillGame,
+  spelling: runSpellingGame,
 };
 
 function startGame(gameId, customExprs) {

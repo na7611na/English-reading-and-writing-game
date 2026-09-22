@@ -4,7 +4,7 @@
 
 // 난이도 순 배점: 4지선다 퀴즈 < 카드 매칭 < 문장 조립 < 스펠링 < 받아쓰기
 // 어려운 게임일수록 정답 1개당 더 많은 점수를 줘서 도전을 유도한다.
-const GAME_POINTS = { quiz: 5, match: 10, builder: 10, spelling: 100, dictation: 100 };
+const GAME_POINTS = { quiz: 5, match: 10, builder: 10, blank: 30, spelling: 100 };
 
 function buildDistractors(all, correct, count) {
   const pool = all.filter(x => x.id !== correct.id && x.en !== correct.en);
@@ -326,9 +326,12 @@ function runBuilderGame(container, allExprs, onFinish) {
   renderQuestion();
 }
 
-// ---------- 5. 쓰기: 받아쓰기 챌린지 (키보드 입력, 자동 채점) ----------
-function runDictationGame(container, allExprs, onFinish) {
-  const items = pickN(allExprs, Math.min(3, allExprs.length));
+// ---------- 5. 쓰기: 철자 빈칸 넣기 게임 (키보드 입력, 자동 채점) ----------
+// 문제마다 무작위 철자 3개를 빈칸으로 바꾼다. renderQuestion()이 매 도전(라운드)마다
+// 새로 호출되며 그때마다 Math.random()으로 빈칸 위치를 다시 뽑으므로,
+// 같은 문장이 다시 나와도 빈칸 위치가 매번 달라진다.
+function runBlankFillGame(container, allExprs, onFinish) {
+  const items = pickN(allExprs, Math.min(6, allExprs.length));
   let idx = 0, score = 0;
   const missed = [];
 
@@ -338,21 +341,37 @@ function runDictationGame(container, allExprs, onFinish) {
     const q = items[idx];
     let usedHint = false;
 
+    const letterPositions = [...q.en].reduce((arr, ch, i) => {
+      if (/[a-zA-Z]/.test(ch)) arr.push(i);
+      return arr;
+    }, []);
+    const blankPositions = new Set(pickN(letterPositions, Math.min(3, letterPositions.length)));
+
     const wrap = el('div', 'game-card');
-    wrap.appendChild(el('div', 'game-instruction', '⌨️ 소리를 듣고 영어로 받아쓰세요'));
+    wrap.appendChild(el('div', 'game-instruction', '🔤 빈칸에 알맞은 철자를 채우세요'));
+    wrap.appendChild(el('div', 'prompt-ko', q.ko));
 
-    const listenBtn = el('button', 'btn-listen', '🔊 다시 듣기');
-    listenBtn.addEventListener('click', () => speakEnglish(q.en));
-    wrap.appendChild(listenBtn);
-    setTimeout(() => speakEnglish(q.en), 300);
-
-    const input = el('input', 'text-input');
-    input.type = 'text';
-    input.autocomplete = 'off';
-    input.autocapitalize = 'off';
-    input.spellcheck = false;
-    input.placeholder = '들은 내용을 영어로 입력하세요';
-    wrap.appendChild(input);
+    const sentenceWrap = el('div', 'blank-sentence');
+    const blanks = [];
+    [...q.en].forEach((ch, i) => {
+      if (blankPositions.has(i)) {
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.maxLength = 1;
+        inp.className = 'blank-input';
+        inp.autocomplete = 'off';
+        inp.autocapitalize = 'off';
+        inp.spellcheck = false;
+        sentenceWrap.appendChild(inp);
+        blanks.push({ input: inp, answer: ch });
+      } else {
+        const span = document.createElement('span');
+        span.className = 'blank-char';
+        span.textContent = ch === ' ' ? ' ' : ch;
+        sentenceWrap.appendChild(span);
+      }
+    });
+    wrap.appendChild(sentenceWrap);
 
     const feedback = el('div', 'feedback');
     wrap.appendChild(feedback);
@@ -364,36 +383,43 @@ function runDictationGame(container, allExprs, onFinish) {
     btnRow.appendChild(checkBtn);
     wrap.appendChild(btnRow);
     container.appendChild(wrap);
-    setTimeout(() => input.focus(), 50);
+    setTimeout(() => blanks[0] && blanks[0].input.focus(), 50);
+
+    blanks.forEach((b, i) => {
+      b.input.addEventListener('input', () => {
+        b.input.value = b.input.value.slice(-1);
+        if (b.input.value && i < blanks.length - 1) blanks[i + 1].input.focus();
+      });
+      b.input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+    });
 
     function check() {
-      const correct = normalize(input.value) === normalize(q.en);
+      const correct = blanks.every(b => b.input.value.trim().toLowerCase() === b.answer.toLowerCase());
       if (correct) {
-        score += GAME_POINTS.dictation;
-        feedback.textContent = `✅ 정답이에요! (${q.ko})`;
+        score += GAME_POINTS.blank;
+        feedback.textContent = '✅ 정답이에요!';
         feedback.className = 'feedback correct';
         if (usedHint) missed.push(q);
         window.setHud({ score, progress: `문제 ${idx + 1} / ${items.length}` });
-        input.disabled = true;
+        blanks.forEach(b => (b.input.disabled = true));
         checkBtn.disabled = true;
         hintBtn.disabled = true;
         wrap.appendChild(buildNextBar(q.en, goNext));
       } else {
-        feedback.textContent = '❌ 틀렸어요. 다시 들어보고 고쳐 써보세요!';
+        feedback.textContent = '❌ 틀렸어요. 다시 고쳐 써보세요!';
         feedback.className = 'feedback wrong';
-        input.focus();
+        blanks[0] && blanks[0].input.focus();
       }
     }
 
     checkBtn.addEventListener('click', check);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
 
     hintBtn.addEventListener('click', () => {
       usedHint = true;
       hintBtn.disabled = true;
-      feedback.textContent = `힌트: ${q.en} (${q.ko})`;
+      feedback.textContent = `힌트: 빈칸 철자는 순서대로 "${blanks.map(b => b.answer).join(', ')}" 예요`;
       feedback.className = 'feedback hint';
-      input.focus();
+      blanks[0] && blanks[0].input.focus();
     });
 
     function goNext() {
