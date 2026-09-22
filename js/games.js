@@ -364,10 +364,12 @@ function runBlankFillGame(container, allExprs, onFinish) {
         inp.spellcheck = false;
         sentenceWrap.appendChild(inp);
         blanks.push({ input: inp, answer: ch });
+      } else if (ch === ' ') {
+        sentenceWrap.appendChild(el('span', 'blank-space'));
       } else {
         const span = document.createElement('span');
         span.className = 'blank-char';
-        span.textContent = ch === ' ' ? ' ' : ch;
+        span.textContent = ch;
         sentenceWrap.appendChild(span);
       }
     });
